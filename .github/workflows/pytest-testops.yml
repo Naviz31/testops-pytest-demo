@@ -1,0 +1,71 @@
+name: Pytest mock tests to TestOps
+
+on:
+  workflow_dispatch:
+    inputs:
+      ALLURE_JOB_RUN_ID:
+        description: "TestOps service parameter. Leave blank"
+        required: false
+      ALLURE_USERNAME:
+        description: "TestOps service parameter. Leave blank"
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  ALLURE_ENDPOINT: ${{ vars.ALLURE_ENDPOINT }}
+  ALLURE_PROJECT_ID: ${{ vars.ALLURE_PROJECT_ID }}
+  ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
+  ALLURE_JOB_RUN_ID: ${{ inputs.ALLURE_JOB_RUN_ID }}
+  ALLURE_USERNAME: ${{ inputs.ALLURE_USERNAME }}
+  ALLURE_RESULTS: allure-results
+  ALLURE_LAUNCH_NAME: "GitHub mock tests #${{ github.run_number }}"
+  ALLURE_LAUNCH_TAGS: "github,pytest,mock,offline"
+
+jobs:
+  autotests:
+    name: Run autonomous pytest tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: python -m pip install .
+
+      - name: Install allurectl
+        uses: allure-framework/setup-allurectl@v1
+
+      - name: Run tests and upload to TestOps when configured
+        shell: bash
+        run: |
+          mkdir -p "$ALLURE_RESULTS" test-results
+          TEST_COMMAND=(python -m pytest --alluredir="$ALLURE_RESULTS" --clean-alluredir --junitxml=test-results/junit.xml)
+
+          if [[ -n "$ALLURE_ENDPOINT" && -n "$ALLURE_PROJECT_ID" && -n "$ALLURE_TOKEN" ]]; then
+            echo "TestOps is configured; running tests under allurectl watch."
+            allurectl watch -- "${TEST_COMMAND[@]}"
+          else
+            echo "TestOps variables are not configured; running offline and saving artifacts only."
+            "${TEST_COMMAND[@]}"
+          fi
+
+      - name: Upload raw test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-allure-results-${{ github.run_number }}
+          path: |
+            allure-results/
+            test-results/
+          if-no-files-found: error
+          retention-days: 14
