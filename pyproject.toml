@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "testops-mock-autotests"
+version = "0.1.0"
+description = "Autonomous pytest examples prepared for Qameta TestOps"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "allure-pytest==2.16.0",
+    "pytest==9.1.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "demo: намеренно смешанные статусы для демонстрации отчёта",
+    "smoke: быстрые проверки основного сценария",
+    "regression: расширенный регрессионный набор",
+    "unit: автономные модульные проверки без внешних обращений",
+]
