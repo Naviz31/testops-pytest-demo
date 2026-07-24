@@ -9,5 +9,6 @@ htmlcov/
 allure-results*/
 allure-report/
 test-results/
+.artifacts/
 .idea/
 .vscode/
